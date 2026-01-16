@@ -141,9 +141,13 @@ def algorithme_thomas(A, d):
 
 
 if __name__ == "__main__":
-    
+    d = np.array([1, 0, 0, 1])
+
     A = np.array([[2, -1, 0, 0],
               [-1, 2, -1, 0],
               [0, -1, 2, -1],
               [0, 0, -1, 2]])
     x_expected = np.linalg.solve(A, d)
+
+    x = algorithme_thomas(A,d)
+    print(x, x_expected)
