@@ -27,33 +27,8 @@ def maillage_temperature(Lx, Ly, Nx, Ny, T_init):
 
 
 
-
-
-
-def extraire_colonne(T, i):
-    Nx, Ny = T.shape
-    colonne = np.zeros(Ny)
-    for j in range(1, Ny+1):
-        colonne[j-1] = T[Nx - i, j-1]
-    return colonne
-
-
-
-def extraire_ligne(T, j):
-    Nx, Ny = T.shape
-    ligne = np.zeros(Nx)
-    for i in range(1, Nx+1):
-        ligne[i-1] = T[Nx - i, j-1]
-    return ligne
-
-
-
 if __name__ == "__main__":
-    X, Y, T, dx, dy = maillage_temperature(5, 5, 12, 10, 0)
-
-
-    print(extraire_colonne(T, 1))  # colonne physique 1
-    print(extraire_ligne(T, 1))    # ligne physique 1
+    X, Y, T, dx, dy = maillage_temperature(5, 5, 10, 10, 0)
 
 
 
