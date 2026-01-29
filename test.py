@@ -2,6 +2,7 @@ import numpy as np
 import calculs
 
 
+
 def test_calcul_omega_bords():
 
     # --- Paramètres du maillage
@@ -28,6 +29,7 @@ def test_calcul_omega_bords():
     # --- Affichage pour inspection
     print("Champ psi :\n", psi)
     print("\nOmega après calcul aux bords :\n", omega)
+    print(x, y)
 
     # --- Vérifications simples
     # Intérieur doit rester nul
@@ -35,4 +37,9 @@ def test_calcul_omega_bords():
         for j in range(1, Ny-1):
             assert omega[i, j] == 0.0, "Erreur : omega intérieur modifié"
 
-    print("\n✅ Test réussi : omega calculé uniquement aux frontières")
+    print("\n Test réussi : omega calculé uniquement aux frontières")
+
+
+
+if __name__ == "__main__":
+    test_calcul_omega_bords()
