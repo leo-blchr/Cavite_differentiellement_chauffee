@@ -1,5 +1,12 @@
+import equations
+import temperature
+import numpy as np
+import secondmembre
+
+
+
 def resolution_SOR(psi,omega,gamma0,dx,dy,Nx,Ny):
-    (N_x, N_y) = np.shape(phi)
+    (N_x, N_y) = np.shape(psi)
     beta=dx/dy
     
     indices = []
