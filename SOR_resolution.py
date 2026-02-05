@@ -1,5 +1,6 @@
-def resolution_SOR(psi,omega,gamma0,dx,dy,Nx,Ny):
-    (N_x, N_y) = np.shape(phi)
+import numpy as np
+def resolution_SOR(psi,omega,gamma0,dx,dy):
+    (Nx, Ny) = np.shape(psi)
     beta=dx/dy
     
     indices = []
@@ -11,9 +12,11 @@ def resolution_SOR(psi,omega,gamma0,dx,dy,Nx,Ny):
                 indices.append((i,j))
                 
     for (i,j) in indices:
+        
         psi [i,j]= 1 / (2*(1+beta*beta)) * (psi [i+1,j])+psi [i-1,j] + beta*beta * (psi [i,j+1] +psi [i,j-1]) -dx *dx *omega [i, j]
+    psi_plus_un=psi
     
-    return(psi)
+    return(psi_plus_un)
 
 
 
