@@ -42,74 +42,89 @@ def algorithme_thomas(A, d):
     return x
 
 
-import numpy as np
-
 def calcul_premier_second_membre_1_T(T, psi, j, dx, dy, dt, Prandt):
     Nx, Ny = T.shape
+
     premier_membre = np.zeros((Nx-2, Nx-2))
-    second_membre = np.zeros(Nx-2)
+    second_membre  = np.zeros(Nx-2)
 
     for i in range(1, Nx-1):
-        premier_membre[i-1, i-1] = 1 + dt/(Prandt*dx*dx)
-       
 
+        # Vitesses centrées (incompressibilité respectée)
+        u = -(psi[i, j+1] - psi[i, j-1]) / (2*dy)
+        v =  (psi[i+1, j] - psi[i-1, j]) / (2*dx)
+
+        # Diagonale principale : diffusion implicite en x
+        premier_membre[i-1, i-1] = 1 + dt/(Prandt*dx*dx)
+
+        # Second membre : diffusion en y + convection explicite
         second_membre[i-1] = (
             T[i, j] * (1 - dt/(Prandt*dy*dy))
-            + T[i, j+1] * ( dt/8*(psi[i+1, j] - psi[i-1, j])/(dx*dy)
-                            + dt/(2*Prandt*dy*dy) )
-            + T[i, j-1] * ( -dt/8*(psi[i+1, j] - psi[i-1, j])/(dx*dy)
-                            + dt/(2*Prandt*dy*dy) )
+            + T[i, j+1] * ( -dt*v/(2*dy) + dt/(2*Prandt*dy*dy) )
+            + T[i, j-1] * (  dt*v/(2*dy) + dt/(2*Prandt*dy*dy) )
         )
 
+        # Points intérieurs
         if 1 < i < Nx-2:
-            premier_membre[i-1, i]   = dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy) \
-                                       - dt/(2*Prandt*dx*dx)
-            premier_membre[i-1, i-2] = -dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy) \
-                                       - dt/(2*Prandt*dx*dx)
+            premier_membre[i-1, i]   =  dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
+            premier_membre[i-1, i-2] = -dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
+
+        # Bord gauche
         elif i == 1:
-            premier_membre[i-1, i]   = dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy) \
-                                       - dt/(2*Prandt*dx*dx)
-            #premier_membre[i-1, i-1] += -dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy) \
-                                        #- dt/(2*Prandt*dx*dx)
-            second_membre[i-1] -= (-dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy) - dt/(2*Prandt*dx*dx)) * T[i-1, j]
+            premier_membre[i-1, i] = dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
+
+            coef = (-dt*u/(2*dx) - dt/(2*Prandt*dx*dx))
+            second_membre[i-1] -= coef * T[i-1, j]
+
+        # Bord droit
         elif i == Nx-2:
-            premier_membre[i-1, i-2] = -dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy) \
-                                       - dt/(2*Prandt*dx*dx)
-            ##- dt/(2*Prandt*dx*dx)
-            second_membre[i-1] -= (+dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy) - dt/(2*Prandt*dx*dx)) * T[i+1, j]
+            premier_membre[i-1, i-2] = -dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
+
+            coef = ( dt*u/(2*dx) - dt/(2*Prandt*dx*dx))
+            second_membre[i-1] -= coef * T[i+1, j]
 
     return premier_membre, second_membre
 
-
 def calcul_premier_second_membre_2_T(T, psi, i, dx, dy, dt, Prandt):
     Nx, Ny = T.shape
+
     premier_membre = np.zeros((Ny-2, Ny-2))
-    second_membre = np.zeros(Ny-2)
+    second_membre  = np.zeros(Ny-2)
 
     for j in range(1, Ny-1):
+
+        # Vitesses (centrées)
+        u = -(psi[i, j+1] - psi[i, j-1]) / (2*dy)
+        v =  (psi[i+1, j] - psi[i-1, j]) / (2*dx)
+
+        # Diagonale principale (diffusion implicite en y)
         premier_membre[j-1, j-1] = 1 + dt/(Prandt*dy*dy)
 
+        # Second membre : diffusion x + convection explicite
         second_membre[j-1] = (
             T[i, j] * (1 - dt/(Prandt*dx*dx))
-            + T[i+1, j] * (-dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy)
-                            + dt/(2*Prandt*dx*dx))
-            + T[i-1, j] * ( dt/8*(psi[i, j+1] - psi[i, j-1])/(dx*dy)
-                            + dt/(2*Prandt*dx*dx))
+            + T[i+1, j] * ( -dt*u/(4*dx) + dt/(2*Prandt*dx*dx) )
+            + T[i-1, j] * (  dt*u/(4*dx) + dt/(2*Prandt*dx*dx) )
         )
 
+        # Points intérieurs
         if 1 < j < Ny-2:
-            premier_membre[j-1, j]   = -dt/8*(psi[i+1, j] - psi[i-1, j])/(dx*dy) \
-                                       - dt/(2*Prandt*dy*dy)
-            premier_membre[j-1, j-2] =  dt/8*(psi[i+1, j] - psi[i-1, j])/(dx*dy) \
-                                       - dt/(2*Prandt*dy*dy)
+            premier_membre[j-1, j]   = -dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
+            premier_membre[j-1, j-2] =  dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
+
+        # Bord bas (j = 1)
         elif j == 1:
-            premier_membre[j-1, j]   = -dt/8*(psi[i+1, j] - psi[i-1, j])/(dx*dy) \
-                                       - dt/(2*Prandt*dy*dy)
-            second_membre[j-1] -= ( dt/8*(psi[i+1, j] - psi[i-1, j])/(dx*dy)
-                                     - dt/(2*Prandt*dy*dy) )
+            premier_membre[j-1, j] = -dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
+
+            coef = ( dt*v/(4*dy) - dt/(2*Prandt*dy*dy) )
+            second_membre[j-1] -= coef * T[i, j-1]
+
+        # Bord haut (j = Ny-2)
         elif j == Ny-2:
-            premier_membre[j-1, j-2] = dt/8*(psi[i+1, j] - psi[i-1, j])/(dx*dy) \
-                                       - dt/(2*Prandt*dy*dy)
+            premier_membre[j-1, j-2] = dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
+
+            coef = ( -dt*v/(4*dy) - dt/(2*Prandt*dy*dy) )
+            second_membre[j-1] -= coef * T[i, j+1]
 
     return premier_membre, second_membre
 
@@ -152,9 +167,7 @@ def calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandt):
     return T_n_plus_un
 
 
-# --------------------
-# Bords de vorticité
-# --------------------
+
 def calcul_omega_bords(psi, dx, dy):
     Nx, Ny = psi.shape
     omega_bords = np.zeros((Nx, Ny))
@@ -290,34 +303,6 @@ def calcul_maille_omega_n_plus_1(omega, T_suivant, psi, dx, dy, dt, nu, beta, g,
 
 
 
-# --------------------
-# Test fonctionnel
-# --------------------
-def test_calcul_omega():
-    Nx, Ny = 10, 10
-    dx = dy = 1.0
-    dt = 0.1
-    nu = 0.01
-    beta = 1.0
-    g = 9.81
-    alpha = 0.0
-
-    omega = np.zeros((Nx, Ny))
-    psi = np.zeros((Nx, Ny))  # Remplace phi par psi
-
-    # Gradient de température horizontal pour produire de la vorticité
-    T_suivant = np.zeros((Nx, Ny))
-    T_suivant[:, -1] = 1.0  # droite chaude
-    T_suivant[:, 0] = 0.0   # gauche froide
-
-    omega_next = calcul_maille_omega_n_plus_1(omega, T_suivant, psi, dx, dy, dt, nu, beta, g, alpha)
-    print("Omega n+1 :\n", omega_next)
-
-
-# Lancer le test
-test_calcul_omega()
-
-
 def resolution_SOR(psi, omega, gamma0, dx, dy):
     Nx, Ny = psi.shape
     beta = dx/dy
@@ -329,6 +314,7 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
             psi[i,j] = (1-gamma0)*psi[i,j] + gamma0*psi_new
 
     return psi
+
 
 
 import matplotlib.pyplot as plt
@@ -362,10 +348,10 @@ def sauver_animation(liste_champs, nom_fichier, titre="", cmap="inferno"):
     plt.close()
 
 
-def test_grille_fine(Nx=20, Ny=20, N_iterations=500, dt=0.0005):
+def test_grille_fine(Nx=30, Ny=30, N_iterations=400, dt=0.000005):
     # Paramètres physiques
           # taille de la grille
-    Lx, Ly = 10.0, 10.0        # longueur physique
+    Lx, Ly = 1, 1        # longueur physique
     dx = Lx / (Nx-1)
     dy = Ly / (Ny-1)
 
@@ -373,7 +359,7 @@ def test_grille_fine(Nx=20, Ny=20, N_iterations=500, dt=0.0005):
     Prandt = 0.71            # pour l’air
     beta = 1.0
     g = 9.81
-    alpha = 0.0              # angle du gradient de T
+    alpha = 15 *np.pi / 180              # angle du gradient de T
     gamma0 = 1.725             # SOR
 
 
@@ -402,7 +388,7 @@ def test_grille_fine(Nx=20, Ny=20, N_iterations=500, dt=0.0005):
         omega = calcul_maille_omega_n_plus_1(omega, T, psi, dx, dy, dt, nu, beta, g, alpha)
 
         # SOR pour psi
-        for _ in range(1):
+        for _ in range(100):
             #et psi_n+1 dépend de omega_n+1
             psi = resolution_SOR(psi, omega, gamma0, dx, dy)
 
@@ -432,3 +418,39 @@ def test_grille_fine(Nx=20, Ny=20, N_iterations=500, dt=0.0005):
 
 # Lancer le test sur une grille fine
 T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi = test_grille_fine()
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_cavite_tournee(T, psi, alpha_deg):
+    Nx, Ny = T.shape
+    x = np.linspace(0, 1, Nx)
+    y = np.linspace(0, 1, Ny)
+    X, Y = np.meshgrid(x, y, indexing='ij')
+
+    # Conversion de l'angle en radians
+    alpha = np.radians(alpha_deg)
+
+    # Rotation des coordonnées
+    X_rot = X*np.cos(alpha) - Y*np.sin(alpha)
+    Y_rot = X*np.sin(alpha) + Y*np.cos(alpha)
+
+    plt.figure(figsize=(6,6))
+    
+    # Champ de température
+    plt.contourf(X_rot, Y_rot, T, 20, cmap='inferno')
+    plt.colorbar(label='Température')
+    
+    # Lignes de courant (psi)
+    cs = plt.contour(X_rot, Y_rot, psi, colors='white', linewidths=1)
+    plt.clabel(cs, inline=True, fontsize=8, fmt='%.2f')
+    
+    plt.title(f'Cavité penchée alpha = {alpha_deg}°')
+    plt.xlabel('X_rot')
+    plt.ylabel('Y_rot')
+    plt.axis('equal')
+    plt.show()
+
+# Exemple avec ton résultat alpha = 15°
+plot_cavite_tournee(T_final, psi_final, alpha_deg=15)
