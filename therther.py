@@ -348,7 +348,7 @@ def sauver_animation(liste_champs, nom_fichier, titre="", cmap="inferno"):
     plt.close()
 
 
-def test_grille_fine(Nx=30, Ny=30, N_iterations=400, dt=0.000005):
+def test_grille_fine(Nx=30, Ny=30, N_iterations=200, dt=0.000005):
     # Paramètres physiques
           # taille de la grille
     Lx, Ly = 1, 1        # longueur physique
@@ -359,7 +359,7 @@ def test_grille_fine(Nx=30, Ny=30, N_iterations=400, dt=0.000005):
     Prandt = 0.71            # pour l’air
     beta = 1.0
     g = 9.81
-    alpha = 15 *np.pi / 180              # angle du gradient de T
+    alpha = 0 *np.pi / 180              # angle du gradient de T
     gamma0 = 1.725             # SOR
 
 
