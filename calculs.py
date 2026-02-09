@@ -1,4 +1,3 @@
-import equations
 import temperature
 import numpy as np
 import secondmembre
@@ -6,16 +5,55 @@ import plots
 import os
 
 
+def algorithme_thomas(A, d):
+    """
+    Résout Ax = d pour une matrice tridiagonale A
+    """
+    #on va normaliser A et d 
+    max_abs_A = np.max(np.abs(A))
+    max_abs_d=np.max(np.abs(d))
+    max_f=max(max_abs_A,max_abs_d)
+    if max_f!=0:
+        A=A/max_f
+        d=d/max_f
+
+    n = A.shape[0]
+    a = np.zeros(n-1)
+    b = np.zeros(n)
+    c = np.zeros(n-1)
+
+    for i in range(n):
+        b[i] = A[i, i]
+        if i > 0:
+            a[i-1] = A[i, i-1]
+        if i < n-1:
+            c[i] = A[i, i+1]
+
+    # Forward elimination
+    for i in range(1, n):
+        m = a[i-1]/b[i-1]
+        b[i] -= m*c[i-1]
+        d[i] -= m*d[i-1]
+
+    # Back substitution
+    x = np.zeros(n)
+    x[-1] = d[-1]/b[-1]
+    for i in range(n-2, -1, -1):
+        x[i] = (d[i] - c[i]*x[i+1])/b[i]
+
+    return x
+
+
 def calcul_thomas_ligne_i(T,i,second_membre_i,A_i):
     
-    T_i_n_plus_demi = equations.algorithme_thomas(A_i, second_membre_i)
+    T_i_n_plus_demi = algorithme_thomas(A_i, second_membre_i)
     return T_i_n_plus_demi
 
 
 
 def calcul_thomas_colonne_j(T,j,second_membre_j,A_j):   
     
-    T_i_n_plus_un = equations.algorithme_thomas(A_j, second_membre_j)
+    T_i_n_plus_un = algorithme_thomas(A_j, second_membre_j)
     return T_i_n_plus_un
 
 
@@ -79,14 +117,14 @@ def calcul_omega_n_plus_1(omega, T, psi, dx, dy, dt, Gr, alpha):
         A, b = secondmembre.calcul_premier_second_membre_1_omega(
             omega, T, psi, j, dx, dy, dt, Gr, alpha
         )
-        omega_star[1:Nx-1, j] = equations.algorithme_thomas(A, b)
+        omega_star[1:Nx-1, j] = algorithme_thomas(A, b)
 
     # --- demi-pas y implicite
     for i in range(1, Nx-1):
         A, b = secondmembre.calcul_premier_second_membre_2_omega(
             omega_star, T, psi, i, dx, dy, dt, Gr, alpha
         )
-        omega_new[i, 1:Ny-1] = equations.algorithme_thomas(A, b)
+        omega_new[i, 1:Ny-1] = algorithme_thomas(A, b)
 
     return omega_new
 
