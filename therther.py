@@ -1,5 +1,7 @@
 import numpy as np
 from math import sin, cos 
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, PillowWriter
 
 
 
@@ -317,8 +319,6 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
 
 
 
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
 
 
 def sauver_animation(liste_champs, nom_fichier, titre="", cmap="inferno"):
@@ -399,7 +399,6 @@ def test_grille_fine(Nx=30, Ny=30, N_iterations=400, dt=0.000005):
             liste_psi.append(psi.copy())
 
     # Affichage final
-    import matplotlib.pyplot as plt
 
     plt.figure(figsize=(12,5))
     plt.subplot(1,2,1)
@@ -420,8 +419,7 @@ def test_grille_fine(Nx=30, Ny=30, N_iterations=400, dt=0.000005):
 T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi = test_grille_fine()
 
 
-import matplotlib.pyplot as plt
-import numpy as np
+
 
 def plot_cavite_tournee(T, psi, alpha_deg):
     Nx, Ny = T.shape
