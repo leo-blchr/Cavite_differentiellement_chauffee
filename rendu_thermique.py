@@ -271,7 +271,7 @@ def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, d
             dt/2*(
                 -u*(omega[i+1,j]-omega[i-1,j])/(2*dx)+
                 (omega[i+1,j]-2*omega[i,j]+omega[i-1,j])/(dx*dx)+
-                Gr*((T_suivant[i,j+1]-T_suivant[i,j-1])*sin(alpha)/(2*dy)-(T_suivant[i+1,j]-T_suivant[i-1,j])*cos(alpha)/(2*dx))
+                Gr*((T_suivant[i,j+1]-T_suivant[i,j-1])*sin(angle)/(2*dy)-(T_suivant[i+1,j]-T_suivant[i-1,j])*cos(angle)/(2*dx))
             )
         )
 
@@ -343,13 +343,13 @@ def main(Grashof, Prandtl, DeltaT):
     beta = 1/300    # coefficient de dilatation thermique [1/K], approximatif pour l'air
     gamma = 1.725
     nombre_iteration = 1000
-    dt = 0.000005
-    angle=90*pi/180
+    dt = 0.00001
+    angle=20*pi/180
 
     Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
     Ly = Lx
-    Nx = 20
-    Ny = 20
+    Nx =40
+    Ny =40
     alpha = nu / Prandtl
     dx = Lx / (Nx - 1)
     dy = Ly / (Ny - 1)
@@ -391,7 +391,7 @@ def main(Grashof, Prandtl, DeltaT):
         #psi = np.zeros((Nx, Ny))
 
         # Sauvegarde
-        if n % 10 == 0:  # garder moins de snapshots pour mémoire
+        if n % 100 == 0:  # garder moins de snapshots pour mémoire
             liste_T.append(T.copy())
             liste_omega.append(omega.copy())
             liste_psi.append(psi.copy())
@@ -414,7 +414,7 @@ def main(Grashof, Prandtl, DeltaT):
 
     return T, omega, psi, liste_T, liste_omega, liste_psi
 
-Grashof=10000
+Grashof=10000000
 Prandtl=0.7
 DetlaT=20
 # Lancer le test sur une grille fine
