@@ -176,19 +176,19 @@ def calcul_omega_bords(psi, dx, dy):
 
      # --- Paroi basse (j = 0)
     for i in range(1, Nx-1):
-        omega_bords[i, 0] = -2.0 * (psi[i, 1] - psi[i, 0]) / dy**2
+        omega_bords[i, 0] = 2.0 * (psi[i, 1] - psi[i, 0]) / dy**2
 
     # --- Paroi haute (j = Ny-1)
     for i in range(1, Nx-1):
-        omega_bords[i, Ny-1] = -2.0 * (psi[i, Ny-2] - psi[i, Ny-1]) / dy**2
+        omega_bords[i, Ny-1] = 2.0 * (psi[i, Ny-2] - psi[i, Ny-1]) / dy**2
 
     # --- Paroi gauche (i = 0)
     for j in range(1, Ny-1):
-        omega_bords[0, j] = -2.0 * (psi[1, j] - psi[0, j]) / dx**2
+        omega_bords[0, j] = 2.0 * (psi[1, j] - psi[0, j]) / dx**2
 
     # --- Paroi droite (i = Nx-1)
     for j in range(1, Ny-1):
-        omega_bords[Nx-1, j] = -2.0 * (psi[Nx-2, j] - psi[Nx-1, j]) / dx**2
+        omega_bords[Nx-1, j] = 2.0 * (psi[Nx-2, j] - psi[Nx-1, j]) / dx**2
 
     # coins
     omega_bords[0,0] = omega_bords[0,-1] = 0
@@ -321,6 +321,7 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
 
 
 
+
 def sauver_animation(liste_champs, nom_fichier, titre="", cmap="inferno"):
     fig, ax = plt.subplots(figsize=(5,4))
 
@@ -399,6 +400,7 @@ def test_grille_fine(Nx=30, Ny=30, N_iterations=400, dt=0.000005):
             liste_psi.append(psi.copy())
 
     # Affichage final
+    import matplotlib.pyplot as plt
 
     plt.figure(figsize=(12,5))
     plt.subplot(1,2,1)
@@ -419,30 +421,30 @@ def test_grille_fine(Nx=30, Ny=30, N_iterations=400, dt=0.000005):
 T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi = test_grille_fine()
 
 
-
+import matplotlib.pyplot as plt
+import numpy as np
 
 def plot_cavite_tournee(T, psi, alpha_deg):
     Nx, Ny = T.shape
-    x = np.linspace(0, 1, Nx)
-    y = np.linspace(0, 1, Ny)
-    X, Y = np.meshgrid(x, y, indexing='ij')
 
-    # Conversion de l'angle en radians
+    x = np.linspace(0, 1, Ny)   # colonnes
+    y = np.linspace(0, 1, Nx)   # lignes
+
+    X, Y = np.meshgrid(x, y, indexing='xy')  # X,Y shape = (Nx, Ny)
+
     alpha = np.radians(alpha_deg)
 
-    # Rotation des coordonnées
     X_rot = X*np.cos(alpha) - Y*np.sin(alpha)
     Y_rot = X*np.sin(alpha) + Y*np.cos(alpha)
-
     plt.figure(figsize=(6,6))
     
     # Champ de température
     plt.contourf(X_rot, Y_rot, T, 20, cmap='inferno')
     plt.colorbar(label='Température')
     
-    # Lignes de courant (psi)
-    cs = plt.contour(X_rot, Y_rot, psi, colors='white', linewidths=1)
-    plt.clabel(cs, inline=True, fontsize=8, fmt='%.2f')
+    # # Lignes de courant (psi)
+    # cs = plt.contour(X_rot, Y_rot, psi, colors='white', linewidths=1)
+    # plt.clabel(cs, inline=True, fontsize=8, fmt='%.2f')
     
     plt.title(f'Cavité penchée alpha = {alpha_deg}°')
     plt.xlabel('X_rot')
