@@ -53,37 +53,39 @@ def calcul_premier_second_membre_1_T(T, psi, j, dx, dy, dt, Prandt):
     for i in range(1, Nx-1):
 
         # Vitesses centrées (incompressibilité respectée)
-        u = -(psi[i, j+1] - psi[i, j-1]) / (2*dy)
-        v =  (psi[i+1, j] - psi[i-1, j]) / (2*dx)
+        u = (psi[i, j+1] - psi[i, j-1]) / (2*dy)
+        v =  -(psi[i+1, j] - psi[i-1, j]) / (2*dx)
 
         # Diagonale principale : diffusion implicite en x
         premier_membre[i-1, i-1] = 1 + dt/(Prandt*dx*dx)
 
         # Second membre : diffusion en y + convection explicite
         second_membre[i-1] = (
-            T[i, j] * (1 - dt/(Prandt*dy*dy))
-            + T[i, j+1] * ( -dt*v/(2*dy) + dt/(2*Prandt*dy*dy) )
-            + T[i, j-1] * (  dt*v/(2*dy) + dt/(2*Prandt*dy*dy) )
+            T[i,j]+
+            dt/2*(
+                -v*(T[i,j+1]-T[i,j-1])/(2*dy)+
+                1/Prandt*(T[i,j+1]-2*T[i,j]+T[i,j-1])/(dy*dy)
+                
+            )
         )
 
         # Points intérieurs
         if 1 < i < Nx-2:
-            premier_membre[i-1, i]   =  dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
-            premier_membre[i-1, i-2] = -dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
+            premier_membre[i-1, i]   =  dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
+            premier_membre[i-1, i-2] = -dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
 
         # Bord gauche
         elif i == 1:
-            premier_membre[i-1, i] = dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
+            premier_membre[i-1, i] = dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
+            premier_membre[i-1, i-1]=premier_membre[i-1, i-1]+ (-dt*u/(4*dx) - dt/(2*Prandt*dx*dx))
 
-            coef = (-dt*u/(2*dx) - dt/(2*Prandt*dx*dx))
-            second_membre[i-1] -= coef * T[i-1, j]
+            
 
         # Bord droit
         elif i == Nx-2:
             premier_membre[i-1, i-2] = -dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
-
-            coef = ( dt*u/(2*dx) - dt/(2*Prandt*dx*dx))
-            second_membre[i-1] -= coef * T[i+1, j]
+            premier_membre[i-1, i-1]=premier_membre[i-1, i-1]+ (dt*u/(4*dx) - dt/(2*Prandt*dx*dx))
+            
 
     return premier_membre, second_membre
 
@@ -96,23 +98,26 @@ def calcul_premier_second_membre_2_T(T, psi, i, dx, dy, dt, Prandt):
     for j in range(1, Ny-1):
 
         # Vitesses (centrées)
-        u = -(psi[i, j+1] - psi[i, j-1]) / (2*dy)
-        v =  (psi[i+1, j] - psi[i-1, j]) / (2*dx)
+        u = (psi[i, j+1] - psi[i, j-1]) / (2*dy)
+        v =  -(psi[i+1, j] - psi[i-1, j]) / (2*dx)
 
         # Diagonale principale (diffusion implicite en y)
         premier_membre[j-1, j-1] = 1 + dt/(Prandt*dy*dy)
 
         # Second membre : diffusion x + convection explicite
         second_membre[j-1] = (
-            T[i, j] * (1 - dt/(Prandt*dx*dx))
-            + T[i+1, j] * ( -dt*u/(4*dx) + dt/(2*Prandt*dx*dx) )
-            + T[i-1, j] * (  dt*u/(4*dx) + dt/(2*Prandt*dx*dx) )
+            T[i,j]+
+            dt/2*(
+                -u*(T[i+1,j]-T[i-1,j])/(2*dx)+
+                1/Prandt*(T[i+1,j]-2*T[i,j]+T[i-1,j])/(dx*dx)
+                
+            )
         )
 
         # Points intérieurs
         if 1 < j < Ny-2:
-            premier_membre[j-1, j]   = -dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
-            premier_membre[j-1, j-2] =  dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
+            premier_membre[j-1, j]   =  dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
+            premier_membre[j-1, j-2] = -dt*v/(4*dy) - dt/(2*Prandt*dy*dy)
 
         # Bord bas (j = 1)
         elif j == 1:
@@ -176,19 +181,19 @@ def calcul_omega_bords(psi, dx, dy):
 
      # --- Paroi basse (j = 0)
     for i in range(1, Nx-1):
-        omega_bords[i, 0] = -2.0 * (psi[i, 1] - psi[i, 0]) / dy**2
+        omega_bords[i, 0] = 2.0 * (psi[i, 1] - psi[i, 0]) / dy**2
 
     # --- Paroi haute (j = Ny-1)
     for i in range(1, Nx-1):
-        omega_bords[i, Ny-1] = -2.0 * (psi[i, Ny-2] - psi[i, Ny-1]) / dy**2
+        omega_bords[i, Ny-1] = 2.0 * (psi[i, Ny-2] - psi[i, Ny-1]) / dy**2
 
     # --- Paroi gauche (i = 0)
     for j in range(1, Ny-1):
-        omega_bords[0, j] = -2.0 * (psi[1, j] - psi[0, j]) / dx**2
+        omega_bords[0, j] = 2.0 * (psi[1, j] - psi[0, j]) / dx**2
 
     # --- Paroi droite (i = Nx-1)
     for j in range(1, Ny-1):
-        omega_bords[Nx-1, j] = -2.0 * (psi[Nx-2, j] - psi[Nx-1, j]) / dx**2
+        omega_bords[Nx-1, j] = 2.0 * (psi[Nx-2, j] - psi[Nx-1, j]) / dx**2
 
     # coins
     omega_bords[0,0] = omega_bords[0,-1] = 0
@@ -197,91 +202,93 @@ def calcul_omega_bords(psi, dx, dy):
     return omega_bords
 
 
-def calcul_premier_second_membre_1_omega(omega, omega_suiv, T_suivant, psi, j, dx, dy, dt, nu, beta, g, alpha):
+def calcul_premier_second_membre_1_omega(omega, omega_suiv, T_suivant, psi, j, dx, dy, dt, alpha,Gr):
     Nx, Ny = omega.shape
     premier_membre = np.zeros((Nx-2, Nx-2))
     second_membre  = np.zeros(Nx-2)
 
     for i in range(1, Nx-1):
         # Vitesses centrées
-        u = -(psi[i, j+1] - psi[i, j-1]) / (2*dy)
-        v =  (psi[i+1, j] - psi[i-1, j]) / (2*dx)
+        u = (psi[i, j+1] - psi[i, j-1]) / (2*dy)
+        v =  -(psi[i+1, j] - psi[i-1, j]) / (2*dx)
 
         # Diagonale principale : diffusion implicite en x
-        premier_membre[i-1, i-1] = 1 + dt*nu/(dx*dx)
+        premier_membre[i-1, i-1] = 1 + dt/(dx*dx)
 
         # Second membre : diffusion y + convection explicite + terme de flottabilité
         second_membre[i-1] = (
-            omega[i,j]*(1 - dt*nu/(dy*dy)) +
-            omega[i,j+1]*( -dt*v/(2*dy) + dt*nu/(2*dy*dy) ) +
-            omega[i,j-1]*(  dt*v/(2*dy) + dt*nu/(2*dy*dy) ) +
-            beta*g*( (T_suivant[i,j+1]-T_suivant[i,j-1])*np.sin(alpha)/dy -
-                     (T_suivant[i+1,j]-T_suivant[i-1,j])*np.cos(alpha)/dx )
+            omega[i,j]+
+            dt/2*(
+                -v*(omega[i,j+1]-omega[i,j-1])/(2*dy)+
+                (omega[i,j+1]-2*omega[i,j]+omega[i,j-1])/(dy*dy)+
+                Gr*((T_suivant[i,j+1]-T_suivant[i,j-1])*sin(alpha)/(2*dy)-(T_suivant[i+1,j]-T_suivant[i-1,j])*cos(alpha)/(2*dx))
+            )
         )
 
         # Points intérieurs
         if 1 < i < Nx-2:
-            premier_membre[i-1, i]   =  dt*u/(2*dx) - dt*nu/(2*dx*dx)
-            premier_membre[i-1, i-2] = -dt*u/(2*dx) - dt*nu/(2*dx*dx)
+            premier_membre[i-1, i]   =  dt*u/(4*dx) - dt/(2*dx*dx)
+            premier_membre[i-1, i-2] = -dt*u/(4*dx) - dt/(2*dx*dx)
 
         # Bord gauche
         elif i == 1:
-            premier_membre[i-1, i] = dt*u/(2*dx) - dt*nu/(2*dx*dx)
-            coef = -dt*u/(2*dx) - dt*nu/(2*dx*dx)
+            premier_membre[i-1, i] = dt*u/(4*dx) - dt/(2*dx*dx)
+            coef = -dt*u/(4*dx) - dt/(2*dx*dx)
             second_membre[i-1] -= coef * omega_suiv[i-1,j]
 
         # Bord droit
         elif i == Nx-2:
-            premier_membre[i-1, i-2] = -dt*u/(2*dx) - dt*nu/(2*dx*dx)
-            coef = dt*u/(2*dx) - dt*nu/(2*dx*dx)
+            premier_membre[i-1, i-2] = -dt*u/(4*dx) - dt/(2*dx*dx)
+            coef = dt*u/(4*dx) - dt/(2*dx*dx)
             second_membre[i-1] -= coef * omega_suiv[i+1,j]
 
     return premier_membre, second_membre
 
 
-def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, dx, dy, dt, nu, beta, g, alpha):
+def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, dx, dy, dt, alpha,Gr):
     Nx, Ny = omega.shape
     premier_membre = np.zeros((Ny-2, Ny-2))
     second_membre  = np.zeros(Ny-2)
 
     for j in range(1, Ny-1):
         # Vitesses centrées
-        u = -(psi[i, j+1] - psi[i, j-1]) / (2*dy)
-        v =  (psi[i+1, j] - psi[i-1, j]) / (2*dx)
+        u = (psi[i, j+1] - psi[i, j-1]) / (2*dy)
+        v =  -(psi[i+1, j] - psi[i-1, j]) / (2*dx)
 
         # Diagonale principale : diffusion implicite en y
-        premier_membre[j-1, j-1] = 1 + dt*nu/(dy*dy)
+        premier_membre[j-1, j-1] = 1 + dt/(dx*dx)
 
         # Second membre : diffusion x + convection explicite + flottabilité
         second_membre[j-1] = (
-            omega[i,j]*(1 - dt*nu/(dx*dx)) +
-            omega[i+1,j]*( -dt*u/(2*dx) + dt*nu/(2*dx*dx) ) +
-            omega[i-1,j]*(  dt*u/(2*dx) + dt*nu/(2*dx*dx) ) +
-            beta*g*( (T_suivant[i,j+1]-T_suivant[i,j-1])*np.sin(alpha)/dy -
-                     (T_suivant[i+1,j]-T_suivant[i-1,j])*np.cos(alpha)/dx )
+            omega[i,j]+
+            dt/2*(
+                -u*(omega[i+1,j]-omega[i-1,j])/(2*dx)+
+                (omega[i+1,j]-2*omega[i,j]+omega[i-1,j])/(dx*dx)+
+                Gr*((T_suivant[i,j+1]-T_suivant[i,j-1])*sin(alpha)/(2*dy)-(T_suivant[i+1,j]-T_suivant[i-1,j])*cos(alpha)/(2*dx))
+            )
         )
 
         # Points intérieurs
         if 1 < j < Ny-2:
-            premier_membre[j-1, j]   = -dt*v/(2*dy) - dt*nu/(2*dy*dy)
-            premier_membre[j-1, j-2] =  dt*v/(2*dy) - dt*nu/(2*dy*dy)
+            premier_membre[j-1, j]   = dt*v/(4*dy) - dt/(2*dy*dy)
+            premier_membre[j-1, j-2] =  -dt*v/(4*dy) - dt/(2*dy*dy)
 
         # Bord bas
         elif j == 1:
-            premier_membre[j-1, j] = -dt*v/(2*dy) - dt*nu/(2*dy*dy)
-            coef = dt*v/(2*dy) - dt*nu/(2*dy*dy)
+            premier_membre[j-1, j] = dt*v/(4*dy) - dt/(2*dy*dy)
+            coef = -dt*v/(4*dy) - dt/(2*dy*dy)
             second_membre[j-1] -= coef * omega_suiv[i,j-1]
 
         # Bord haut
         elif j == Ny-2:
-            premier_membre[j-1, j-2] = dt*v/(2*dy) - dt*nu/(2*dy*dy)
-            coef = -dt*v/(2*dy) - dt*nu/(2*dy*dy)
+            premier_membre[j-1, j-2] = -dt*v/(4*dy) - dt/(2*dy*dy)
+            coef = dt*v/(4*dy) - dt/(2*dy*dy)
             second_membre[j-1] -= coef * omega_suiv[i,j+1]
 
     return premier_membre, second_membre
 
 
-def calcul_maille_omega_n_plus_1(omega, T_suivant, psi, dx, dy, dt, nu, beta, g, alpha):
+def calcul_maille_omega_n_plus_1(omega, T_suivant, psi, dx, dy, dt, alpha,Gr):
     Nx, Ny = omega.shape
     omega_n_plus_demi = calcul_omega_bords(psi, dx, dy)
 
@@ -320,6 +327,7 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
 
 
 
+<<<<<<< HEAD
 
 def sauver_animation(liste_champs, nom_fichier, titre="", cmap="inferno"):
     fig, ax = plt.subplots(figsize=(5,4))
@@ -452,3 +460,5 @@ def plot_cavite_tournee(T, psi, alpha_deg):
 
 # Exemple avec ton résultat alpha = 15°
 plot_cavite_tournee(T_final, psi_final, alpha_deg=15)
+=======
+>>>>>>> a733318 (therther corrigé)
