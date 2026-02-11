@@ -207,7 +207,7 @@ def calcul_omega_bords(psi, dx, dy):
     return omega_bords
 
 
-def calcul_premier_second_membre_1_omega(omega, omega_suiv, T_suivant, psi, j, dx, dy, dt, alpha,Gr,angle):
+def calcul_premier_second_membre_1_omega(omega, omega_suiv, T_suivant, psi, j, dx, dy, dt,Gr,angle):
     Nx, Ny = omega.shape
     premier_membre = np.zeros((Nx-2, Nx-2))
     second_membre  = np.zeros(Nx-2)
@@ -251,7 +251,7 @@ def calcul_premier_second_membre_1_omega(omega, omega_suiv, T_suivant, psi, j, d
     return premier_membre, second_membre
 
 
-def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, dx, dy, dt, alpha,Gr,angle):
+def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, dx, dy, dt,Gr,angle):
     Nx, Ny = omega.shape
     premier_membre = np.zeros((Ny-2, Ny-2))
     second_membre  = np.zeros(Ny-2)
@@ -295,14 +295,14 @@ def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, d
     return premier_membre, second_membre
 
 
-def calcul_maille_omega_n_plus_1(omega, T_suivant, psi, dx, dy, dt, alpha,Gr,angle):
+def calcul_maille_omega_n_plus_1(omega, T_suivant, psi, dx, dy, dt,Gr,angle):
     Nx, Ny = omega.shape
     omega_n_plus_demi = calcul_omega_bords(psi, dx, dy)
 
     # ADI direction y
     for j in range(1, Ny-1):
         A_j, b_j = calcul_premier_second_membre_1_omega(
-            omega, omega_n_plus_demi, T_suivant, psi, j, dx, dy, dt, alpha,Gr,angle
+            omega, omega_n_plus_demi, T_suivant, psi, j, dx, dy, dt,Gr,angle
         )
         omega_n_plus_demi[1:-1,j] = algorithme_thomas(A_j, b_j)
 
@@ -311,7 +311,7 @@ def calcul_maille_omega_n_plus_1(omega, T_suivant, psi, dx, dy, dt, alpha,Gr,ang
     # ADI direction x
     for i in range(1, Nx-1):
         A_i, b_i = calcul_premier_second_membre_2_omega(
-            omega_n_plus_demi, omega_n_plus_un, T_suivant, psi, i, dx, dy, dt, alpha,Gr,angle
+            omega_n_plus_demi, omega_n_plus_un, T_suivant, psi, i, dx, dy, dt,Gr,angle
         )
         omega_n_plus_un[i,1:-1] = algorithme_thomas(A_i, b_i)
 
@@ -323,34 +323,60 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
     Nx, Ny = psi.shape
     beta = dx/dy
     
+    max_psi_prec=np.max(psi)
+    
+    
     for i in range(1, Nx-1):
         for j in range(1, Ny-1):
             psi_new = (psi[i+1,j] + psi[i-1,j] + beta**2*(psi[i,j+1]+psi[i,j-1]) - dx**2*omega[i,j]) / (2*(1+beta**2))
             # SOR relaxation
             psi[i,j] = (1-gamma0)*psi[i,j] + gamma0*psi_new
+            
+            
+    max_psi_suiv=np.max(psi)     
+    
+    nb_it=2
+    
+    #print('avant le while')
+    #print(abs(max_psi_suiv-max_psi_prec)/max_psi_prec)
+    
+    while abs(max_psi_suiv-max_psi_prec)/max_psi_prec>0.01:
+        #print('après le while')
+        #print(abs(max_psi_suiv-max_psi_prec)/max_psi_prec) 
+        
+        max_psi_prec=max_psi_suiv
+        
+        nb_it=nb_it+1
+        for i in range(1, Nx-1):
+            for j in range(1, Ny-1):
+                psi_new = (psi[i+1,j] + psi[i-1,j] + beta**2*(psi[i,j+1]+psi[i,j-1]) - dx**2*omega[i,j]) / (2*(1+beta**2))
+                # SOR relaxation
+                psi[i,j] = (1-gamma0)*psi[i,j] + gamma0*psi_new
+                max_psi_suiv=max(max_psi_prec,psi[i,j])
+        max_psi_suiv=np.max(psi)
+        
+    return psi, nb_it
 
-    return psi
 
 
 
-
-def main(Grashof, Prandtl, DeltaT):
+def main(Grashof, Prandtl):
     
     from math import pi
     ### Initialisation
-    nu = 1.5e-5     
-    g = 9.81        
-    beta = 1/300    # coefficient de dilatation thermique [1/K], approximatif pour l'air
+    #nu = 1.5e-5     
+    #g = 9.81        
+    #beta = 1/300    # coefficient de dilatation thermique [1/K], approximatif pour l'air
     gamma = 1.725
-    nombre_iteration = 1000
-    dt = 0.00001
+    nombre_iteration = 10000
+    dt = 0.0001
     angle=20*pi/180
 
-    Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
-    Ly = Lx
+    #Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
+    Lx = Ly=1
     Nx =40
     Ny =40
-    alpha = nu / Prandtl
+    #alpha = nu / Prandtl
     dx = Lx / (Nx - 1)
     dy = Ly / (Ny - 1)
     
@@ -383,11 +409,11 @@ def main(Grashof, Prandtl, DeltaT):
 
         # ADI vorticité
         #pour le nouveau omega_n+1 on utilise les valeurs de T_n+1 et de psi_n et omega_n
-        omega = calcul_maille_omega_n_plus_1(omega, T, psi, dx, dy, dt, alpha,Grashof,angle)
+        omega = calcul_maille_omega_n_plus_1(omega, T, psi, dx, dy, dt,Grashof,angle)
 
         # SOR pour psi
         
-        psi = resolution_SOR(psi, omega, gamma, dx, dy)
+        psi, nb_it = resolution_SOR(psi, omega, gamma, dx, dy)
         #psi = np.zeros((Nx, Ny))
 
         # Sauvegarde
@@ -411,11 +437,12 @@ def main(Grashof, Prandtl, DeltaT):
     plt.title('Vorticité finale')
 
     plt.show()
-
+    
+    
     return T, omega, psi, liste_T, liste_omega, liste_psi
 
-Grashof=10000000
+Grashof=10000
 Prandtl=0.7
-DetlaT=20
+
 # Lancer le test sur une grille fine
-T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi = main(Grashof, Prandtl, DetlaT)
+T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi = main(Grashof, Prandtl)
