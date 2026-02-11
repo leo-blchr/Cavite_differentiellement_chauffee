@@ -1,5 +1,7 @@
 import numpy as np
 from math import sin, cos 
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, PillowWriter
 
 
 
@@ -41,8 +43,6 @@ def algorithme_thomas(A, d):
 
     return x
 
-
-import numpy as np
 
 def calcul_premier_second_membre_1_T(T, psi, j, dx, dy, dt, Prandt):
     Nx, Ny = T.shape
@@ -331,8 +331,6 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
     return psi
 
 
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
 
 
 def sauver_animation(liste_champs, nom_fichier, titre="", cmap="inferno"):
