@@ -1,4 +1,3 @@
-import equations
 import numpy as np
 
 
