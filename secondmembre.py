@@ -1,4 +1,3 @@
-import equations
 import numpy as np
 from math import sin, cos 
 
@@ -102,5 +101,7 @@ def calcul_premier_second_membre_2_omega(omega, T_suivant, phi, j, dx, dy, dt, n
             premier_membre[i, i-1] =  dt/8 * (phi[i+1, j] - phi[i-1, j])/(dx*dy) - dt * nu/(2*dy*dy)
 
     return premier_membre, second_membre
+
+
 
 
