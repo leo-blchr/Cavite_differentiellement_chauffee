@@ -401,11 +401,15 @@ def main(Grashof, Prandtl):
     liste_T = [T.copy()]
     liste_omega = [omega.copy()]
     liste_psi = [psi.copy()]
-    
+    Tmax = [0]
     
     for n in range(nombre_iteration):
+        if n % 500 == 0:
+            print(n)
+            print(Tmax[len(Tmax) - 1])
         # ADI température
         T = calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandtl)
+        Tmax.append(T[20, 20])
 
         # ADI vorticité
         #pour le nouveau omega_n+1 on utilise les valeurs de T_n+1 et de psi_n et omega_n
@@ -422,8 +426,7 @@ def main(Grashof, Prandtl):
             liste_omega.append(omega.copy())
             liste_psi.append(psi.copy())
             
-    # Affichage final
-    import matplotlib.pyplot as plt
+
 
     plt.figure(figsize=(12,5))
     plt.subplot(1,2,1)
@@ -431,18 +434,28 @@ def main(Grashof, Prandtl):
     plt.colorbar()
     plt.title('Température finale')
 
+
+
+
     plt.subplot(1,2,2)
     plt.imshow(omega, origin='lower', cmap='bwr')
     plt.colorbar()
     plt.title('Vorticité finale')
 
     plt.show()
+
+    plt.figure(figsize=(12,5))
+    plt.plot(Tmax)
+    plt.show()
     
-    
-    return T, omega, psi, liste_T, liste_omega, liste_psi
+    return T, omega, psi, liste_T, liste_omega, liste_psi, Tmax
 
 Grashof=10000
 Prandtl=0.7
 
 # Lancer le test sur une grille fine
-T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi = main(Grashof, Prandtl)
+T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi, Tmax = main(Grashof, Prandtl)
+
+plt.figure(figsize=(12,5))
+plt.plot(Tmax)
+plt.show()
