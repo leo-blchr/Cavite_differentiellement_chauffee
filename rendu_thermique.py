@@ -1,5 +1,5 @@
 import numpy as np
-from math import sin, cos 
+from math import sin, cos, pi
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 
@@ -358,22 +358,28 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
     return psi, nb_it
 
 
+def condition_arret_temperature(nb_it, max_T_suiv, max_T_prec):
+    if nb_it < 50:
+        return True
+    else:
+        return abs(max_T_suiv-max_T_prec)/max_T_suiv > 0.0001
+
+
 
 
 def main(Grashof, Prandtl):
-    
-    from math import pi
+
     ### Initialisation
     #nu = 1.5e-5     
     #g = 9.81        
     #beta = 1/300    # coefficient de dilatation thermique [1/K], approximatif pour l'air
     gamma = 1.725
-    nombre_iteration = 10000
+    #nombre_iteration = 100
     dt = 0.0001
     angle=20*pi/180
 
     #Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
-    Lx = Ly=1
+    Lx = Ly = 1
     Nx =40
     Ny =40
     #alpha = nu / Prandtl
@@ -391,7 +397,7 @@ def main(Grashof, Prandtl):
     T[:, 0]  = 1.0   # gauche chaude
     T[:, -1] = 0.0   # droite froide
 
-# Parois horizontales isolées
+    # Parois horizontales isolées
     T[0, :] = T[1, :]
     T[-1, :] = T[-2, :]
 
@@ -403,10 +409,21 @@ def main(Grashof, Prandtl):
     liste_psi = [psi.copy()]
     Tmax = [0]
     
-    for n in range(nombre_iteration):
-        if n % 500 == 0:
-            print(n)
+    moy_T_prec = np.mean(T[:,1:]) - 0.1
+    moy_T_suiv=np.mean(T[:,1:])  
+    nombre_iteration = 1
+    print(moy_T_suiv)
+    print(moy_T_prec) 
+    print(abs(moy_T_suiv-moy_T_prec)/moy_T_suiv)     
+
+#    for n in range(nombre_iteration):
+    while condition_arret_temperature(nombre_iteration, moy_T_suiv, moy_T_prec):
+        # print("passé while")
+        moy_T_prec = moy_T_suiv
+        if nombre_iteration % 50 == 0:
+            print(nombre_iteration)
             print(Tmax[len(Tmax) - 1])
+            print(abs(moy_T_suiv-moy_T_prec)/moy_T_suiv)
         # ADI température
         T = calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandtl)
         Tmax.append(T[20, 20])
@@ -420,11 +437,21 @@ def main(Grashof, Prandtl):
         psi, nb_it = resolution_SOR(psi, omega, gamma, dx, dy)
         #psi = np.zeros((Nx, Ny))
 
+
+        moy_T_suiv = np.mean(T[:,1:])
+        nombre_iteration += 1
+
+        # print(abs(moy_T_suiv-moy_T_prec)/moy_T_suiv if moy_T_suiv != 0 else 0)
+        # print(moy_T_suiv)
+        # print(moy_T_prec)
         # Sauvegarde
-        if n % 100 == 0:  # garder moins de snapshots pour mémoire
+        if nombre_iteration % 100 == 0:  # garder moins de snapshots pour mémoire
             liste_T.append(T.copy())
             liste_omega.append(omega.copy())
             liste_psi.append(psi.copy())
+
+
+    print(nombre_iteration, moy_T_suiv, moy_T_prec, abs(moy_T_suiv-moy_T_prec)/moy_T_suiv)
             
 
 
@@ -444,9 +471,9 @@ def main(Grashof, Prandtl):
 
     plt.show()
 
-    plt.figure(figsize=(12,5))
-    plt.plot(Tmax)
-    plt.show()
+    # plt.figure(figsize=(12,5))
+    # plt.plot(Tmax)
+    # plt.show()
     
     return T, omega, psi, liste_T, liste_omega, liste_psi, Tmax
 
@@ -455,7 +482,3 @@ Prandtl=0.7
 
 # Lancer le test sur une grille fine
 T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi, Tmax = main(Grashof, Prandtl)
-
-plt.figure(figsize=(12,5))
-plt.plot(Tmax)
-plt.show()
