@@ -368,14 +368,15 @@ def main(Grashof, Prandtl):
     #g = 9.81        
     #beta = 1/300    # coefficient de dilatation thermique [1/K], approximatif pour l'air
     gamma = 1.725
-    nombre_iteration = 10000
+    nombre_iteration = 100000
     dt = 0.0001
     angle=20*pi/180
 
     #Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
-    Lx = Ly=1
-    Nx =40
-    Ny =40
+    Lx = 1
+    Ly=3
+    Nx =11
+    Ny =11
     #alpha = nu / Prandtl
     dx = Lx / (Nx - 1)
     dy = Ly / (Ny - 1)
@@ -440,9 +441,9 @@ def main(Grashof, Prandtl):
     
     
     return T, omega, psi, liste_T, liste_omega, liste_psi
-
-Grashof=10000
+Rayleigh=1000
 Prandtl=0.7
+Grashof=Rayleigh*Prandtl
 
 # Lancer le test sur une grille fine
 T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi = main(Grashof, Prandtl)
