@@ -180,27 +180,52 @@ def calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandt):
 
 
 
+# def calcul_omega_bords(psi, dx, dy):
+#     Nx, Ny = psi.shape
+#     omega_bords = np.zeros((Nx, Ny))
+
+#      # --- Paroi basse (j = 0)
+#     for i in range(1, Nx-1):
+#         omega_bords[i, 0] = 2.0 * (psi[i, 1] - psi[i, 0]) / dy**2
+
+#     # --- Paroi haute (j = Ny-1)
+#     for i in range(1, Nx-1):
+#         omega_bords[i, Ny-1] = 2.0 * (psi[i, Ny-2] - psi[i, Ny-1]) / dy**2
+
+#     # --- Paroi gauche (i = 0)
+#     for j in range(1, Ny-1):
+#         omega_bords[0, j] = 2.0 * (psi[1, j] - psi[0, j]) / dx**2
+
+#     # --- Paroi droite (i = Nx-1)
+#     for j in range(1, Ny-1):
+#         omega_bords[Nx-1, j] = 2.0 * (psi[Nx-2, j] - psi[Nx-1, j]) / dx**2
+
+#     # coins
+#     omega_bords[0,0] = omega_bords[0,-1] = 0
+#     omega_bords[-1,0] = omega_bords[-1,-1] = 0
+
+#     return omega_bords
+
 def calcul_omega_bords(psi, dx, dy):
     Nx, Ny = psi.shape
     omega_bords = np.zeros((Nx, Ny))
 
-     # --- Paroi basse (j = 0)
-    for i in range(1, Nx-1):
-        omega_bords[i, 0] = 2.0 * (psi[i, 1] - psi[i, 0]) / dy**2
-
-    # --- Paroi haute (j = Ny-1)
-    for i in range(1, Nx-1):
-        omega_bords[i, Ny-1] = 2.0 * (psi[i, Ny-2] - psi[i, Ny-1]) / dy**2
-
-    # --- Paroi gauche (i = 0)
+    # Paroi basse en y (i=0) — paroi horizontale isolée
     for j in range(1, Ny-1):
-        omega_bords[0, j] = 2.0 * (psi[1, j] - psi[0, j]) / dx**2
+        omega_bords[0, j] = 2.0*(psi[1,j] - psi[0,j])/dx**2
 
-    # --- Paroi droite (i = Nx-1)
+    # Paroi haute en y (i=Nx-1) — paroi horizontale isolée  
     for j in range(1, Ny-1):
-        omega_bords[Nx-1, j] = 2.0 * (psi[Nx-2, j] - psi[Nx-1, j]) / dx**2
+        omega_bords[Nx-1, j] = 2.0*(psi[Nx-2,j] - psi[Nx-1,j])/dx**2
 
-    # coins
+    # Paroi gauche en x (j=0, T=1) — paroi verticale chaude
+    for i in range(1, Nx-1):
+        omega_bords[i, 0] = 2.0*(psi[i,1] - psi[i,0])/dy**2
+
+    # Paroi droite en x (j=Ny-1, T=0) — paroi verticale froide
+    for i in range(1, Nx-1):
+        omega_bords[i, Ny-1] = 2.0*(psi[i,Ny-2] - psi[i,Ny-1])/dy**2
+
     omega_bords[0,0] = omega_bords[0,-1] = 0
     omega_bords[-1,0] = omega_bords[-1,-1] = 0
 
@@ -227,7 +252,7 @@ def calcul_premier_second_membre_1_omega(omega, omega_suiv, T_suivant, psi, j, d
             dt/2*(
                 -v*(omega[i,j+1]-omega[i,j-1])/(2*dy)+
                 (omega[i,j+1]-2*omega[i,j]+omega[i,j-1])/(dy*dy)+
-                Gr*((T_suivant[i,j+1]-T_suivant[i,j-1])*sin(angle)/(2*dy)-(T_suivant[i+1,j]-T_suivant[i-1,j])*cos(angle)/(2*dx))
+                Gr*((T_suivant[i+1,j]-T_suivant[i-1,j])*sin(angle)/(2*dy)+(T_suivant[i,j+1]-T_suivant[i,j-1])*cos(angle)/(2*dx))
             )
         )
 
@@ -271,7 +296,7 @@ def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, d
             dt/2*(
                 -u*(omega[i+1,j]-omega[i-1,j])/(2*dx)+
                 (omega[i+1,j]-2*omega[i,j]+omega[i-1,j])/(dx*dx)+
-                Gr*((T_suivant[i,j+1]-T_suivant[i,j-1])*sin(angle)/(2*dy)-(T_suivant[i+1,j]-T_suivant[i-1,j])*cos(angle)/(2*dx))
+                Gr*((T_suivant[i + 1,j]-T_suivant[i - 1,j])*sin(angle)/(2*dy)+(T_suivant[i,j+1]-T_suivant[i,j-1])*cos(angle)/(2*dx))
             )
         )
 
@@ -376,7 +401,7 @@ def main(Grashof, Prandtl):
     gamma = 1.725
     #nombre_iteration = 100
     dt = 0.0001
-    angle=20*pi/180
+    angle=0*pi/180
 
     #Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
     Lx = Ly = 1
@@ -471,13 +496,13 @@ def main(Grashof, Prandtl):
 
     plt.show()
 
-    # plt.figure(figsize=(12,5))
-    # plt.plot(Tmax)
-    # plt.show()
+    plt.figure(figsize=(12,5))
+    plt.plot(psi)
+    plt.show()
     
     return T, omega, psi, liste_T, liste_omega, liste_psi, Tmax
 
-Grashof=10000
+Grashof=142800
 Prandtl=0.7
 
 # Lancer le test sur une grille fine
