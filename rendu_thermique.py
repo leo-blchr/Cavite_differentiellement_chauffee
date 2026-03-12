@@ -383,11 +383,17 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
     return psi, nb_it
 
 
-def condition_arret_temperature(nb_it, max_T_suiv, max_T_prec):
-    if nb_it < 50:
+def condition_arret_temperature(nombre_iteration, T_suiv, T_prec):
+    if nombre_iteration == 1:
         return True
-    else:
-        return abs(max_T_suiv-max_T_prec)/max_T_suiv > 0.0001
+    
+    max_difference = 0
+    for i in range(T_suiv.shape[0]):
+        for j in range(T_suiv.shape[1]):
+            difference = abs(T_suiv[i,j] - T_prec[i,j])
+            if difference > max_difference:
+                max_difference = difference
+    return max_difference > 0.0001
 
 
 
@@ -433,22 +439,18 @@ def main(Grashof, Prandtl):
     liste_omega = [omega.copy()]
     liste_psi = [psi.copy()]
     Tmax = [0]
-    
-    moy_T_prec = np.mean(T[:,1:]) - 0.1
-    moy_T_suiv=np.mean(T[:,1:])  
-    nombre_iteration = 1
-    print(moy_T_suiv)
-    print(moy_T_prec) 
-    print(abs(moy_T_suiv-moy_T_prec)/moy_T_suiv)     
+
+    T_prec = T
+    T_suiv = T
+    nombre_iteration = 1  
 
 #    for n in range(nombre_iteration):
-    while condition_arret_temperature(nombre_iteration, moy_T_suiv, moy_T_prec):
+    while condition_arret_temperature(nombre_iteration, T_suiv, T_prec):
         # print("passé while")
-        moy_T_prec = moy_T_suiv
+        T_prec = T_suiv
         if nombre_iteration % 50 == 0:
             print(nombre_iteration)
             print(Tmax[len(Tmax) - 1])
-            print(abs(moy_T_suiv-moy_T_prec)/moy_T_suiv)
         # ADI température
         T = calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandtl)
         Tmax.append(T[20, 20])
@@ -463,7 +465,7 @@ def main(Grashof, Prandtl):
         #psi = np.zeros((Nx, Ny))
 
 
-        moy_T_suiv = np.mean(T[:,1:])
+        T_suiv = T
         nombre_iteration += 1
 
         # print(abs(moy_T_suiv-moy_T_prec)/moy_T_suiv if moy_T_suiv != 0 else 0)
@@ -476,7 +478,7 @@ def main(Grashof, Prandtl):
             liste_psi.append(psi.copy())
 
 
-    print(nombre_iteration, moy_T_suiv, moy_T_prec, abs(moy_T_suiv-moy_T_prec)/moy_T_suiv)
+    print(nombre_iteration, T_suiv, T_prec)
             
 
 
@@ -502,7 +504,7 @@ def main(Grashof, Prandtl):
     
     return T, omega, psi, liste_T, liste_omega, liste_psi, Tmax
 
-Grashof=142800
+Grashof=14280
 Prandtl=0.7
 
 # Lancer le test sur une grille fine
@@ -541,21 +543,23 @@ def calcul_nusselt(T, dx):
     Nx, Ny = T.shape
     Nu = np.zeros(Ny)
     # Paroi gauche (x=0)
-    for j in range(Ny):
-        Nu[j] = (T[0,j] - T[1,j])/dx  # signe inversé pour que Nu>0 pour flux chaud vers fluide
+    for i in range(Nx):
+        Nu[i] = (T[i,0] - T[i,1])/dx  # signe inversé pour que Nu>0 pour flux chaud vers fluide
+        print(f"Nu[{i}] = {Nu[i]} (T[{i},0]={T[i,0]}, T[{i},1]={T[i,1]})")
     Nu_moy = np.mean(Nu)
     Nu_mid = Nu[Ny//2]
     Nu_0 = Nu[0]
     Nu_max = np.max(Nu)
     Nu_min = np.min(Nu)
-    return Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min
+    Nu_total = np.sum(Nu)
+    return Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total
 # -------------------------
 # Fonction pour afficher toutes les valeurs
 # -------------------------
 def afficher_resultats(T, psi, dx, dy):
     u, w = calcul_vitesses(psi, dx, dy)
     psi_mid, psi_max, pos, u_max, w_max = calcul_extrema(psi, u, w)
-    Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min = calcul_nusselt(T, dx)
+    Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total = calcul_nusselt(T, dx)
 
     print("------ Résultats numériques ------")
     print("|psi_mid| =", psi_mid)
@@ -567,9 +571,9 @@ def afficher_resultats(T, psi, dx, dy):
     print("Nu_0 =", Nu_0)
     print("Nu_max =", Nu_max)
     print("Nu_min =", Nu_min)
-    
+    print("Nu_total =", Nu_total)
 
-    return psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min
+    return psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total
 
 Lx = Ly = 1
 Nx =40
@@ -578,4 +582,4 @@ Ny =40
 dx = Lx / (Nx - 1)
 dy = Ly / (Ny - 1)
     
-psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min = afficher_resultats(T_final, psi_final, dx, dy)
+psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total = afficher_resultats(T_final, psi_final, dx, dy)
