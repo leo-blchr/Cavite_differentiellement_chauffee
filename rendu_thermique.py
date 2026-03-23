@@ -47,8 +47,13 @@ def algorithme_thomas(A, d):
 def calcul_premier_second_membre_1_T(T, psi, j, dx, dy, dt, Prandt):
     Nx, Ny = T.shape
 
-    premier_membre = np.zeros((Nx-2, Nx-2))
-    second_membre  = np.zeros(Nx-2)
+    premier_membre = np.zeros((Nx, Nx))
+    second_membre  = np.zeros(Nx)
+
+    # Condition de Neumann flux nul en i=0
+    premier_membre[0, 0] = 1.0
+    premier_membre[0, 1] = -1.0
+    second_membre[0] = 0.0
 
     for i in range(1, Nx-1):
 
@@ -59,10 +64,10 @@ def calcul_premier_second_membre_1_T(T, psi, j, dx, dy, dt, Prandt):
         
 
         # Diagonale principale : diffusion implicite en x
-        premier_membre[i-1, i-1] = 1 + dt/(Prandt*dx*dx)
+        premier_membre[i, i] = 1 + dt/(Prandt*dx*dx)
 
         # Second membre : diffusion en y + convection explicite
-        second_membre[i-1] = (
+        second_membre[i] = (
             T[i,j]+
             dt/2*(
                 -v*(T[i,j+1]-T[i,j-1])/(2*dy)+
@@ -71,24 +76,13 @@ def calcul_premier_second_membre_1_T(T, psi, j, dx, dy, dt, Prandt):
             )
         )
 
-        # Points intérieurs
-        if 1 < i < Nx-2:
-            premier_membre[i-1, i]   =  dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
-            premier_membre[i-1, i-2] = -dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
+        premier_membre[i, i+1]   =  dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
+        premier_membre[i, i-1] = -dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
 
-        # Bord gauche
-        elif i == 1:
-            premier_membre[i-1, i] = dt*u/(4*dx) - dt/(2*Prandt*dx*dx)
-            premier_membre[i-1, i-1]=premier_membre[i-1, i-1]+ (-dt*u/(4*dx) - dt/(2*Prandt*dx*dx))
-            
-
-            
-
-        # Bord droit
-        elif i == Nx-2:
-            premier_membre[i-1, i-2] = -dt*u/(2*dx) - dt/(2*Prandt*dx*dx)
-            premier_membre[i-1, i-1]=premier_membre[i-1, i-1]+(dt*u/(4*dx) - dt/(2*Prandt*dx*dx))
-        
+    # Condition de Neumann flux nul en i=Nx-1
+    premier_membre[-1, -1] = 1.0
+    premier_membre[-1, -2] = -1.0
+    second_membre[-1] = 0.0
 
     return premier_membre, second_membre
 
@@ -150,31 +144,23 @@ def calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandt):
     # --------------------
     for j in range(1, Ny-1):
         A_j, b_j = calcul_premier_second_membre_1_T(T, psi, j, dx, dy, dt, Prandt)
-        T_n_plus_demi[1:-1, j] = algorithme_thomas(A_j, b_j)
+        T_n_plus_demi[:, j] = algorithme_thomas(A_j, b_j)
 
   
     # Parois verticales (x)
     T_n_plus_demi[:, 0]  = 1.0
     T_n_plus_demi[:, -1] = 0.0
 
-    # Parois horizontales (y, isolées)
-    T_n_plus_demi[0, :]  = T_n_plus_demi[1, :]
-    T_n_plus_demi[-1, :] = T_n_plus_demi[-2, :]
-
     # --------------------
     # Étape 2 : direction x (lignes)
     # --------------------
-    for i in range(1, Nx-1):
+    for i in range(0, Nx):
         A_i, b_i = calcul_premier_second_membre_2_T(T_n_plus_demi, psi, i, dx, dy, dt, Prandt)
         T_n_plus_un[i, 1:-1] = algorithme_thomas(A_i, b_i)
 
      # Parois verticales (x)
     T_n_plus_un[:, 0]  = 1.0
     T_n_plus_un[:, -1] = 0.0
-
-    # Parois horizontales (y, isolées)
-    T_n_plus_un[0, :]  = T_n_plus_un[1, :]
-    T_n_plus_un[-1, :] = T_n_plus_un[-2, :]
 
     return T_n_plus_un
 
@@ -210,11 +196,11 @@ def calcul_omega_bords(psi, dx, dy):
     Nx, Ny = psi.shape
     omega_bords = np.zeros((Nx, Ny))
 
-    # Paroi basse en y (i=0) — paroi horizontale isolée
+    # Paroi haute en y (i=0) — paroi horizontale isolée
     for j in range(1, Ny-1):
         omega_bords[0, j] = 2.0*(psi[1,j] - psi[0,j])/dx**2
 
-    # Paroi haute en y (i=Nx-1) — paroi horizontale isolée  
+    # Paroi basse en y (i=Nx-1) — paroi horizontale isolée  
     for j in range(1, Ny-1):
         omega_bords[Nx-1, j] = 2.0*(psi[Nx-2,j] - psi[Nx-1,j])/dx**2
 
@@ -296,7 +282,7 @@ def calcul_premier_second_membre_2_omega(omega, omega_suiv, T_suivant, psi, i, d
             dt/2*(
                 -u*(omega[i+1,j]-omega[i-1,j])/(2*dx)+
                 (omega[i+1,j]-2*omega[i,j]+omega[i-1,j])/(dx*dx)+
-                Gr*((T_suivant[i + 1,j]-T_suivant[i - 1,j])*sin(angle)/(2*dy)+(T_suivant[i,j+1]-T_suivant[i,j-1])*cos(angle)/(2*dx))
+                Gr*((T_suivant[i+1,j]-T_suivant[i-1,j])*sin(angle)/(2*dy)+(T_suivant[i,j+1]-T_suivant[i,j-1])*cos(angle)/(2*dx))
             )
         )
 
@@ -348,8 +334,7 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
     Nx, Ny = psi.shape
     beta = dx/dy
     
-    max_psi_prec=np.max(psi)
-    
+    psi_prec = psi.copy()
     
     for i in range(1, Nx-1):
         for j in range(1, Ny-1):
@@ -358,27 +343,20 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
             psi[i,j] = (1-gamma0)*psi[i,j] + gamma0*psi_new
             
             
-    max_psi_suiv=np.max(psi)     
+    erreur = np.max(np.abs(psi - psi_prec))
     
     nb_it=2
     
-    #print('avant le while')
-    #print(abs(max_psi_suiv-max_psi_prec)/max_psi_prec)
-    
-    while abs(max_psi_suiv-max_psi_prec)/max_psi_prec>0.01:
-        #print('après le while')
-        #print(abs(max_psi_suiv-max_psi_prec)/max_psi_prec) 
-        
-        max_psi_prec=max_psi_suiv
-        
+    while erreur > 0.0001:
+        psi_prec = psi.copy()
         nb_it=nb_it+1
         for i in range(1, Nx-1):
             for j in range(1, Ny-1):
                 psi_new = (psi[i+1,j] + psi[i-1,j] + beta**2*(psi[i,j+1]+psi[i,j-1]) - dx**2*omega[i,j]) / (2*(1+beta**2))
                 # SOR relaxation
                 psi[i,j] = (1-gamma0)*psi[i,j] + gamma0*psi_new
-                max_psi_suiv=max(max_psi_prec,psi[i,j])
-        max_psi_suiv=np.max(psi)
+                
+        erreur = np.max(np.abs(psi - psi_prec))
         
     return psi, nb_it
 
@@ -504,7 +482,7 @@ def main(Grashof, Prandtl):
     
     return T, omega, psi, liste_T, liste_omega, liste_psi, Tmax
 
-Grashof=14280
+Grashof=7000
 Prandtl=0.7
 
 # Lancer le test sur une grille fine
@@ -532,8 +510,11 @@ def calcul_extrema(psi, u, w):
     psi_mid = abs(psi[Nx//2, Ny//2])
     psi_max = np.max(abs(psi))
     pos = np.unravel_index(np.argmax(abs(psi)), psi.shape)
-    u_max = np.max(u)
-    w_max = np.max(w)
+    # u = vitesse horizontale, max sur le plan vertical médian z=0.5 → i = Nx//2
+    u_max = np.max(np.abs(u[Nx//2, :]))
+
+    # w = vitesse verticale, max sur le plan horizontal médian x=0.5 → j = Ny//2
+    w_max = np.max(np.abs(w[:, Ny//2]))  
     return psi_mid, psi_max, pos, u_max, w_max
 
 # -------------------------
