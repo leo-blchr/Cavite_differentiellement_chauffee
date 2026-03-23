@@ -154,7 +154,7 @@ def calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandt):
     # --------------------
     # Étape 2 : direction x (lignes)
     # --------------------
-    for i in range(0, Nx):
+    for i in range(1, Nx-1):
         A_i, b_i = calcul_premier_second_membre_2_T(T_n_plus_demi, psi, i, dx, dy, dt, Prandt)
         T_n_plus_un[i, 1:-1] = algorithme_thomas(A_i, b_i)
 
@@ -162,35 +162,12 @@ def calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandt):
     T_n_plus_un[:, 0]  = 1.0
     T_n_plus_un[:, -1] = 0.0
 
+    # Parois horizontales (y, flux nul après la mise à jour X)
+    T_n_plus_un[0, :]  = T_n_plus_un[1, :]
+    T_n_plus_un[-1, :] = T_n_plus_un[-2, :]
+
     return T_n_plus_un
 
-
-
-# def calcul_omega_bords(psi, dx, dy):
-#     Nx, Ny = psi.shape
-#     omega_bords = np.zeros((Nx, Ny))
-
-#      # --- Paroi basse (j = 0)
-#     for i in range(1, Nx-1):
-#         omega_bords[i, 0] = 2.0 * (psi[i, 1] - psi[i, 0]) / dy**2
-
-#     # --- Paroi haute (j = Ny-1)
-#     for i in range(1, Nx-1):
-#         omega_bords[i, Ny-1] = 2.0 * (psi[i, Ny-2] - psi[i, Ny-1]) / dy**2
-
-#     # --- Paroi gauche (i = 0)
-#     for j in range(1, Ny-1):
-#         omega_bords[0, j] = 2.0 * (psi[1, j] - psi[0, j]) / dx**2
-
-#     # --- Paroi droite (i = Nx-1)
-#     for j in range(1, Ny-1):
-#         omega_bords[Nx-1, j] = 2.0 * (psi[Nx-2, j] - psi[Nx-1, j]) / dx**2
-
-#     # coins
-#     omega_bords[0,0] = omega_bords[0,-1] = 0
-#     omega_bords[-1,0] = omega_bords[-1,-1] = 0
-
-#     return omega_bords
 
 def calcul_omega_bords(psi, dx, dy):
     Nx, Ny = psi.shape
@@ -362,16 +339,11 @@ def resolution_SOR(psi, omega, gamma0, dx, dy):
 
 
 def condition_arret_temperature(nombre_iteration, T_suiv, T_prec):
-    if nombre_iteration == 1:
+    if nombre_iteration <= 10:
         return True
     
-    max_difference = 0
-    for i in range(T_suiv.shape[0]):
-        for j in range(T_suiv.shape[1]):
-            difference = abs(T_suiv[i,j] - T_prec[i,j])
-            if difference > max_difference:
-                max_difference = difference
-    return max_difference > 0.0001
+    max_difference = np.max(np.abs(T_suiv - T_prec))
+    return max_difference > 1e-7
 
 
 
@@ -389,8 +361,8 @@ def main(Grashof, Prandtl):
 
     #Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
     Lx = Ly = 1
-    Nx =40
-    Ny =40
+    Nx =41
+    Ny =41
     #alpha = nu / Prandtl
     dx = Lx / (Nx - 1)
     dy = Ly / (Ny - 1)
@@ -406,12 +378,6 @@ def main(Grashof, Prandtl):
     T[:, 0]  = 1.0   # gauche chaude
     T[:, -1] = 0.0   # droite froide
 
-    # Parois horizontales isolées
-    T[0, :] = T[1, :]
-    T[-1, :] = T[-2, :]
-
-    
-
     # Stockage pour visualisation rapide
     liste_T = [T.copy()]
     liste_omega = [omega.copy()]
@@ -426,9 +392,9 @@ def main(Grashof, Prandtl):
     while condition_arret_temperature(nombre_iteration, T_suiv, T_prec):
         # print("passé while")
         T_prec = T_suiv
-        if nombre_iteration % 50 == 0:
-            print(nombre_iteration)
-            print(Tmax[len(Tmax) - 1])
+        if nombre_iteration % 500 == 0:
+            print(f"Iteration {nombre_iteration} / Diff_T max = {np.max(np.abs(T_suiv - T_prec)):.2e}")
+            
         # ADI température
         T = calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandtl)
         Tmax.append(T[20, 20])
@@ -482,8 +448,9 @@ def main(Grashof, Prandtl):
     
     return T, omega, psi, liste_T, liste_omega, liste_psi, Tmax
 
-Grashof=7000
-Prandtl=0.7
+Ra = 10000
+Prandtl=0.71
+Grashof = Ra / Prandtl
 
 # Lancer le test sur une grille fine
 T_final, omega_final, psi_final, liste_T, liste_omega, liste_psi, Tmax = main(Grashof, Prandtl)
@@ -522,45 +489,43 @@ def calcul_extrema(psi, u, w):
 # -------------------------
 def calcul_nusselt(T, dx):
     Nx, Ny = T.shape
-    Nu = np.zeros(Ny)
-    # Paroi gauche (x=0)
+    Nu = np.zeros(Nx)
+    # Paroi gauche (x=0) - Dérivée d'ordre 2 pour plus de précision
     for i in range(Nx):
-        Nu[i] = (T[i,0] - T[i,1])/dx  # signe inversé pour que Nu>0 pour flux chaud vers fluide
-        print(f"Nu[{i}] = {Nu[i]} (T[{i},0]={T[i,0]}, T[{i},1]={T[i,1]})")
-    Nu_moy = np.mean(Nu)
-    Nu_mid = Nu[Ny//2]
+        Nu[i] = (3*T[i,0] - 4*T[i,1] + T[i,2]) / (2*dx)
+        
+    Nu_moy = np.trapz(Nu, dx=dx)  # Intégration spatiale trapézoïdale
+    Nu_mid = Nu[Nx//2]
     Nu_0 = Nu[0]
     Nu_max = np.max(Nu)
     Nu_min = np.min(Nu)
-    Nu_total = np.sum(Nu)
+    Nu_total = np.sum(Nu) * dx
     return Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total
 # -------------------------
 # Fonction pour afficher toutes les valeurs
 # -------------------------
-def afficher_resultats(T, psi, dx, dy):
+def afficher_resultats(T, psi, dx, dy, Prandt):
     u, w = calcul_vitesses(psi, dx, dy)
     psi_mid, psi_max, pos, u_max, w_max = calcul_extrema(psi, u, w)
     Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total = calcul_nusselt(T, dx)
 
-    print("------ Résultats numériques ------")
-    print("|psi_mid| =", psi_mid)
-    print("|psi|max =", psi_max, "position =", pos)
-    print("u_max =", u_max)
-    print("w_max =", w_max)
-    print("Nu_moy =", Nu_moy)
-    print("Nu_1/2 =", Nu_mid)
-    print("Nu_0 =", Nu_0)
-    print("Nu_max =", Nu_max)
-    print("Nu_min =", Nu_min)
-    print("Nu_total =", Nu_total)
+    print(f"|psi_mid| = {psi_mid:.4f}")
+    print(f"|psi|max = {psi_max:.4f} position = {pos}")
+    print(" (Adimensionnement par le temps thermique : variables * Pr = 0.71)")
+    print(f"|psi_mid|      : {psi_mid * Prandt:.3f} ")
+    print(f"u_max (horiz)  : {w_max * Prandt:.3f} ")  
+    print(f"w_max (vertic) : {u_max * Prandt:.3f} ")
+    print(f"Nu_moy         : {Nu_moy:.3f} ")
+    print(f"Nu_1/2         : {Nu_mid:.3f} ")
+    print(f"Nu_max         : {Nu_max:.3f} ")
+    print(f"Nu_min         : {Nu_min:.3f} ")
 
     return psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total
 
 Lx = Ly = 1
-Nx =40
-Ny =40
-    #alpha = nu / Prandtl
+Nx = 40
+Ny = 40
 dx = Lx / (Nx - 1)
 dy = Ly / (Ny - 1)
     
-psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total = afficher_resultats(T_final, psi_final, dx, dy)
+psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total = afficher_resultats(T_final, psi_final, dx, dy, Prandtl)
