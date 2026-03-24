@@ -356,13 +356,14 @@ def main(Grashof, Prandtl):
     #beta = 1/300    # coefficient de dilatation thermique [1/K], approximatif pour l'air
     gamma = 1.725
     #nombre_iteration = 100
-    dt = 0.0001
+    dt = 0.000001
+    #dt = 0.0001
     angle=0*pi/180
 
     #Lx = (Grashof * nu**2 / (g * beta * DeltaT))**(1/3)
     Lx = Ly = 1
-    Nx =41
-    Ny =41
+    Nx = 81
+    Ny = 81
     #alpha = nu / Prandtl
     dx = Lx / (Nx - 1)
     dy = Ly / (Ny - 1)
@@ -391,10 +392,13 @@ def main(Grashof, Prandtl):
 #    for n in range(nombre_iteration):
     while condition_arret_temperature(nombre_iteration, T_suiv, T_prec):
         # print("passé while")
-        T_prec = T_suiv
+        if nombre_iteration == 10:
+            print(("je suis passé"))
         if nombre_iteration % 500 == 0:
-            print(f"Iteration {nombre_iteration} / Diff_T max = {np.max(np.abs(T_suiv - T_prec)):.2e}")
+            print(f"Iteration {nombre_iteration} / Diff_T max = {np.max(np.abs(T_suiv - T_prec)):.7e}")
             
+        T_prec = T_suiv.copy()
+        
         # ADI température
         T = calcul_maille_temperature_n_plus_1(T, psi, dx, dy, dt, Prandtl)
         Tmax.append(T[20, 20])
@@ -448,7 +452,7 @@ def main(Grashof, Prandtl):
     
     return T, omega, psi, liste_T, liste_omega, liste_psi, Tmax
 
-Ra = 10000
+Ra = 1000000
 Prandtl=0.71
 Grashof = Ra / Prandtl
 
@@ -523,8 +527,8 @@ def afficher_resultats(T, psi, dx, dy, Prandt):
     return psi_mid, psi_max, pos, u_max, w_max, Nu_moy, Nu_mid, Nu_0, Nu_max, Nu_min, Nu_total
 
 Lx = Ly = 1
-Nx = 40
-Ny = 40
+Nx = 41
+Ny = 41
 dx = Lx / (Nx - 1)
 dy = Ly / (Ny - 1)
     
